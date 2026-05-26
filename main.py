@@ -26,7 +26,7 @@ dp = Dispatcher()
 MIN_LINK_WAIT_SECONDS = 7
 DELETE_AFTER_SECONDS = 30
 REQUIRED_LINKS_COUNT = 6
-BASE_WEB_URL = "https://epidemic-happily-egotism.ngrok-free.dev"
+BASE_WEB_URL = "https://app.freemoviestream.online"
 
 USER_PROGRESS = {}
 
