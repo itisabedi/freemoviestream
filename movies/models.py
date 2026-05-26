@@ -9,6 +9,28 @@ from django.utils.text import slugify
 BOT_USERNAME = "your_movie_download_bot"
 
 
+class StorageChannel(models.Model):
+    name = models.CharField(max_length=255)
+    telegram_chat_id = models.BigIntegerField(blank=True, null=True)
+    description = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def contents_count(self):
+        return self.contents.count()
+
+    @property
+    def items_count(self):
+        return ContentItem.objects.filter(
+            content__storage_channel=self
+        ).count()
+
+
 class Content(models.Model):
     TYPE_SERIES = "series"
     TYPE_MOVIE = "movie"
@@ -18,12 +40,22 @@ class Content(models.Model):
         (TYPE_MOVIE, "Movie"),
     ]
 
+    storage_channel = models.ForeignKey(
+        StorageChannel,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="contents"
+    )
+
     title = models.CharField(max_length=255)
+
     content_type = models.CharField(
         max_length=20,
         choices=CONTENT_TYPES,
         default=TYPE_SERIES,
     )
+
     slug = models.SlugField(max_length=255, unique=True, blank=True)
 
     class Meta:
