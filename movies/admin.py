@@ -1,6 +1,8 @@
 from django import forms
 from django.contrib import admin
 from django.db import models
+from django.urls import reverse
+from django.utils.html import format_html_join
 
 from .models import (
     StorageChannel,
@@ -29,6 +31,7 @@ class StorageChannelAdmin(admin.ModelAdmin):
     readonly_fields = (
         "contents_count_display",
         "items_count_display",
+        "contents_links",
     )
 
     fields = (
@@ -37,6 +40,7 @@ class StorageChannelAdmin(admin.ModelAdmin):
         "description",
         "contents_count_display",
         "items_count_display",
+        "contents_links",
     )
 
     def contents_count_display(self, obj):
@@ -54,6 +58,29 @@ class StorageChannelAdmin(admin.ModelAdmin):
         ).count()
 
     items_count_display.short_description = "Content items count"
+
+    def contents_links(self, obj):
+        if not obj.pk:
+            return "-"
+
+        contents = obj.contents.all()
+
+        if not contents:
+            return "-"
+
+        return format_html_join(
+            "",
+            '<div style="margin-bottom: 6px;"><a href="{}">{}</a></div>',
+            (
+                (
+                    reverse("admin:movies_content_change", args=[content.id]),
+                    content.title,
+                )
+                for content in contents
+            )
+        )
+
+    contents_links.short_description = "Contents"
 
 
 class ContentItemInline(admin.StackedInline):
