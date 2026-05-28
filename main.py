@@ -38,10 +38,13 @@ def get_item_by_code(code: str):
 
         return {
             "content_title": item.content.title,
+            "content_type": item.content.content_type.name if item.content.content_type else "Content",
             "title": item.title,
             "storage_chat_id": item.storage_chat_id,
             "storage_message_id": item.storage_message_id,
             "download_code": item.download_code,
+            "season_number": item.season_number,
+            "episode_number": item.episode_number,
         }
 
     except ContentItem.DoesNotExist:
@@ -179,9 +182,20 @@ async def start_handler(message: Message):
         "required_links": selected_links,
     }
 
+    # ساخت متن پیام با content_type داینامیک
+    lines = [f"{item['content_type']}: {item['content_title'].title()}"]
+
+    if item["season_number"] and item["episode_number"]:
+        lines.append(f"Season {item['season_number']} Episode {item['episode_number']}")
+    elif item["season_number"]:
+        lines.append(f"Season {item['season_number']}")
+    elif item["episode_number"]:
+        lines.append(f"Episode {item['episode_number']}")
+
+    caption = "\n".join(lines)
+
     await message.answer(
-        f"Movie: {item['content_title']}\n"
-        f"Item: {item['title']}\n\n"
+        f"{caption}\n\n"
         f"You will receive {len(selected_links)} links.\n"
         f"Please open every link.\n\n"
         f"After opening each website, wait at least 10 seconds.\n"
@@ -259,9 +273,17 @@ async def done_handler(callback: CallbackQuery):
     missing_ids = required_ids - opened_ids
 
     if missing_ids:
+        # پیدا کردن شماره لینک‌هایی که باز نشدن
+        missing_numbers = []
+        for index, link in enumerate(selected_links, start=1):
+            if link["id"] in missing_ids:
+                missing_numbers.append(str(index))
+
+        missing_list = ", ".join(missing_numbers)
+
         await callback.answer(
-            f"You have not opened all websites yet.\n\n"
-            f"{len(missing_ids)} link(s) remaining.",
+            f"You have not opened all links yet.\n\n"
+            f"Please open link(s): {missing_list}",
             show_alert=True
         )
         return

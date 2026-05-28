@@ -31,15 +31,28 @@ class StorageChannel(models.Model):
         ).count()
 
 
+class ContentType(models.Model):
+    """
+    Ex: Series, Movie, Documentary, Animation, ...
+    """
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Content Type"
+        verbose_name_plural = "Content Types"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+
 class Content(models.Model):
-    TYPE_SERIES = "series"
-    TYPE_MOVIE = "movie"
-
-    CONTENT_TYPES = [
-        (TYPE_SERIES, "Series"),
-        (TYPE_MOVIE, "Movie"),
-    ]
-
     storage_channel = models.ForeignKey(
         StorageChannel,
         on_delete=models.SET_NULL,
@@ -50,10 +63,12 @@ class Content(models.Model):
 
     title = models.CharField(max_length=255)
 
-    content_type = models.CharField(
-        max_length=20,
-        choices=CONTENT_TYPES,
-        default=TYPE_SERIES,
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="contents"
     )
 
     slug = models.SlugField(max_length=255, unique=True, blank=True)
@@ -77,25 +92,10 @@ class ContentItem(models.Model):
         related_name="items"
     )
 
-    # title فیلد حذف شد - اتوماتیک از content + season + episode ساخته میشه
-
-    season_number = models.PositiveIntegerField(
-        blank=True,
-        null=True
-    )
-
-    episode_number = models.PositiveIntegerField(
-        blank=True,
-        null=True
-    )
-
-    quality = models.CharField(
-        max_length=50,
-        blank=True
-    )
-
+    season_number = models.PositiveIntegerField(blank=True, null=True)
+    episode_number = models.PositiveIntegerField(blank=True, null=True)
+    quality = models.CharField(max_length=50, blank=True)
     telegram_message_link = models.TextField()
-
     storage_chat_id = models.BigIntegerField(blank=True, null=True)
     storage_message_id = models.BigIntegerField(blank=True, null=True)
 
@@ -114,7 +114,6 @@ class ContentItem(models.Model):
 
     @property
     def title(self):
-        """اتوماتیک از content title + season + episode می‌سازه - مثلاً: Euphoria S01 E02"""
         parts = [self.content.title.title()]
         if self.season_number:
             parts.append(f"S{self.season_number:02d}")
@@ -124,56 +123,40 @@ class ContentItem(models.Model):
 
     @property
     def display_type(self):
-        """نوع محتوا - Series یا Movie"""
-        if self.content.content_type == Content.TYPE_SERIES:
-            return "Series"
-        return "Movie"
+        if self.content.content_type:
+            return self.content.content_type.name
+        return "Content"
 
     @property
     def telegram_caption(self):
-        """
-        متن پیام بات تلگرام:
-        Series: Euphoria
-        Season 2 Episode 3
-        """
         lines = [f"{self.display_type}: {self.content.title.title()}"]
-
         if self.season_number and self.episode_number:
             lines.append(f"Season {self.season_number} Episode {self.episode_number}")
         elif self.season_number:
             lines.append(f"Season {self.season_number}")
         elif self.episode_number:
             lines.append(f"Episode {self.episode_number}")
-
         return "\n".join(lines)
 
     def parse_telegram_message_link(self):
         match = re.search(r"t\.me/c/(\d+)/(\d+)", self.telegram_message_link or "")
-
         if not match:
             raise ValidationError(
                 "Telegram link is invalid. Example: https://t.me/c/3936259652/2"
             )
-
         channel_id = match.group(1)
         message_id = match.group(2)
-
         self.storage_chat_id = int(f"-100{channel_id}")
         self.storage_message_id = int(message_id)
 
     def generate_download_code(self):
-        # از content.slug استفاده میکنه - تغییری نکرده
         parts = [self.content.slug]
-
         if self.season_number:
             parts.append(f"S{self.season_number:02d}")
-
         if self.episode_number:
             parts.append(f"E{self.episode_number:02d}")
-
         if self.quality:
             parts.append(self.quality.upper())
-
         self.download_code = "_".join(parts)
 
     def generate_deep_link(self):
@@ -207,7 +190,6 @@ class RequiredLink(models.Model):
 
 class RequiredLinkClick(models.Model):
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-
     telegram_user_id = models.BigIntegerField()
     item_code = models.CharField(max_length=255)
 

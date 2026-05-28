@@ -8,9 +8,24 @@ from .models import (
     StorageChannel,
     Content,
     ContentItem,
+    ContentType,
     RequiredLink,
     RequiredLinkClick,
 )
+
+
+@admin.register(ContentType)
+class ContentTypeAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "slug", "contents_count_display")
+    search_fields = ("name", "slug")
+    readonly_fields = ("slug",)
+
+    fields = ("name", "slug")
+
+    def contents_count_display(self, obj):
+        return obj.contents.count()
+
+    contents_count_display.short_description = "Contents count"
 
 
 @admin.register(StorageChannel)
@@ -23,10 +38,7 @@ class StorageChannelAdmin(admin.ModelAdmin):
         "items_count_display",
     )
 
-    search_fields = (
-        "name",
-        "telegram_chat_id",
-    )
+    search_fields = ("name", "telegram_chat_id")
 
     readonly_fields = (
         "contents_count_display",
@@ -53,21 +65,16 @@ class StorageChannelAdmin(admin.ModelAdmin):
     def items_count_display(self, obj):
         if not obj.pk:
             return 0
-        return ContentItem.objects.filter(
-            content__storage_channel=obj
-        ).count()
+        return ContentItem.objects.filter(content__storage_channel=obj).count()
 
     items_count_display.short_description = "Content items count"
 
     def contents_links(self, obj):
         if not obj.pk:
             return "-"
-
         contents = obj.contents.all()
-
         if not contents:
             return "-"
-
         return format_html_join(
             "",
             '<div style="margin-bottom: 6px;"><a href="{}">{}</a></div>',
@@ -89,16 +96,12 @@ class ContentItemInline(admin.StackedInline):
 
     formfield_overrides = {
         models.TextField: {
-            "widget": forms.TextInput(
-                attrs={
-                    "style": "width: 90%;",
-                }
-            )
+            "widget": forms.TextInput(attrs={"style": "width: 90%;"})
         }
     }
 
     readonly_fields = (
-        "title",              # اتوماتیک ساخته میشه - فقط نمایش
+        "title",
         "storage_chat_id",
         "storage_message_id",
         "download_code",
@@ -107,7 +110,7 @@ class ContentItemInline(admin.StackedInline):
     )
 
     fields = (
-        "title",              # readonly - نمایش اتوماتیک Euphoria S01 E02
+        "title",
         ("season_number", "episode_number", "quality"),
         "telegram_message_link",
         ("storage_chat_id", "storage_message_id"),
@@ -146,9 +149,7 @@ class ContentAdmin(admin.ModelAdmin):
         "slug",
     )
 
-    inlines = [
-        ContentItemInline,
-    ]
+    inlines = [ContentItemInline]
 
     def items_count_display(self, obj):
         return obj.items.count()
@@ -162,7 +163,7 @@ class ContentItemAdmin(admin.ModelAdmin):
         "id",
         "content",
         "content_storage_channel",
-        "title",              # از property میاد - Euphoria S01 E02
+        "title",
         "season_number",
         "episode_number",
         "quality",
@@ -186,7 +187,7 @@ class ContentItemAdmin(admin.ModelAdmin):
     )
 
     readonly_fields = (
-        "title",              # اتوماتیک ساخته میشه - فقط نمایش
+        "title",
         "storage_chat_id",
         "storage_message_id",
         "download_code",
@@ -196,11 +197,7 @@ class ContentItemAdmin(admin.ModelAdmin):
 
     formfield_overrides = {
         models.TextField: {
-            "widget": forms.TextInput(
-                attrs={
-                    "style": "width: 90%;",
-                }
-            )
+            "widget": forms.TextInput(attrs={"style": "width: 90%;"})
         }
     }
 
@@ -211,7 +208,6 @@ class ContentItemAdmin(admin.ModelAdmin):
 
     def get_fields(self, request, obj=None):
         if obj is None:
-            # موقع ساخت جدید - title نمایش داده نمیشه چون هنوز content انتخاب نشده
             return (
                 "content",
                 "season_number",
@@ -219,10 +215,9 @@ class ContentItemAdmin(admin.ModelAdmin):
                 "quality",
                 "telegram_message_link",
             )
-
         return (
             "content",
-            "title",              # readonly - نمایش اتوماتیک
+            "title",
             "season_number",
             "episode_number",
             "quality",
@@ -237,14 +232,7 @@ class ContentItemAdmin(admin.ModelAdmin):
 
 @admin.register(RequiredLink)
 class RequiredLinkAdmin(admin.ModelAdmin):
-    list_display = (
-        "id",
-        "title",
-        "url",
-        "is_active",
-        "created_at",
-    )
-
+    list_display = ("id", "title", "url", "is_active", "created_at")
     list_filter = ("is_active",)
     search_fields = ("title", "url")
 
@@ -260,7 +248,6 @@ class RequiredLinkClickAdmin(admin.ModelAdmin):
         "created_at",
         "opened_at",
     )
-
     list_filter = ("is_opened", "required_link")
     search_fields = ("telegram_user_id", "item_code", "token")
     readonly_fields = ("token", "created_at", "opened_at")
