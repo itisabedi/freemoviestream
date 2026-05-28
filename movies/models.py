@@ -77,7 +77,7 @@ class ContentItem(models.Model):
         related_name="items"
     )
 
-    title = models.CharField(max_length=255)
+    # title فیلد حذف شد - اتوماتیک از content + season + episode ساخته میشه
 
     season_number = models.PositiveIntegerField(
         blank=True,
@@ -112,6 +112,41 @@ class ContentItem(models.Model):
     class Meta:
         ordering = ["content", "season_number", "episode_number", "quality"]
 
+    @property
+    def title(self):
+        """اتوماتیک از content title + season + episode می‌سازه - مثلاً: Euphoria S01 E02"""
+        parts = [self.content.title.title()]
+        if self.season_number:
+            parts.append(f"S{self.season_number:02d}")
+        if self.episode_number:
+            parts.append(f"E{self.episode_number:02d}")
+        return " ".join(parts)
+
+    @property
+    def display_type(self):
+        """نوع محتوا - Series یا Movie"""
+        if self.content.content_type == Content.TYPE_SERIES:
+            return "Series"
+        return "Movie"
+
+    @property
+    def telegram_caption(self):
+        """
+        متن پیام بات تلگرام:
+        Series: Euphoria
+        Season 2 Episode 3
+        """
+        lines = [f"{self.display_type}: {self.content.title.title()}"]
+
+        if self.season_number and self.episode_number:
+            lines.append(f"Season {self.season_number} Episode {self.episode_number}")
+        elif self.season_number:
+            lines.append(f"Season {self.season_number}")
+        elif self.episode_number:
+            lines.append(f"Episode {self.episode_number}")
+
+        return "\n".join(lines)
+
     def parse_telegram_message_link(self):
         match = re.search(r"t\.me/c/(\d+)/(\d+)", self.telegram_message_link or "")
 
@@ -127,6 +162,7 @@ class ContentItem(models.Model):
         self.storage_message_id = int(message_id)
 
     def generate_download_code(self):
+        # از content.slug استفاده میکنه - تغییری نکرده
         parts = [self.content.slug]
 
         if self.season_number:
@@ -153,7 +189,7 @@ class ContentItem(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.content.title} - {self.title}"
+        return self.title
 
 
 class RequiredLink(models.Model):

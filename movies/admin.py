@@ -98,6 +98,7 @@ class ContentItemInline(admin.StackedInline):
     }
 
     readonly_fields = (
+        "title",              # اتوماتیک ساخته میشه - فقط نمایش
         "storage_chat_id",
         "storage_message_id",
         "download_code",
@@ -106,7 +107,7 @@ class ContentItemInline(admin.StackedInline):
     )
 
     fields = (
-        "title",
+        "title",              # readonly - نمایش اتوماتیک Euphoria S01 E02
         ("season_number", "episode_number", "quality"),
         "telegram_message_link",
         ("storage_chat_id", "storage_message_id"),
@@ -161,7 +162,7 @@ class ContentItemAdmin(admin.ModelAdmin):
         "id",
         "content",
         "content_storage_channel",
-        "title",
+        "title",              # از property میاد - Euphoria S01 E02
         "season_number",
         "episode_number",
         "quality",
@@ -172,7 +173,6 @@ class ContentItemAdmin(admin.ModelAdmin):
     )
 
     search_fields = (
-        "title",
         "download_code",
         "telegram_message_link",
         "content__title",
@@ -186,6 +186,7 @@ class ContentItemAdmin(admin.ModelAdmin):
     )
 
     readonly_fields = (
+        "title",              # اتوماتیک ساخته میشه - فقط نمایش
         "storage_chat_id",
         "storage_message_id",
         "download_code",
@@ -210,9 +211,9 @@ class ContentItemAdmin(admin.ModelAdmin):
 
     def get_fields(self, request, obj=None):
         if obj is None:
+            # موقع ساخت جدید - title نمایش داده نمیشه چون هنوز content انتخاب نشده
             return (
                 "content",
-                "title",
                 "season_number",
                 "episode_number",
                 "quality",
@@ -221,7 +222,7 @@ class ContentItemAdmin(admin.ModelAdmin):
 
         return (
             "content",
-            "title",
+            "title",              # readonly - نمایش اتوماتیک
             "season_number",
             "episode_number",
             "quality",
